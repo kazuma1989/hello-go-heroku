@@ -27,5 +27,22 @@ func main() {
 		})
 	})
 
+	router.GET("/nagayo.ics", func(c *gin.Context) {
+		c.Header("Content-Type", "text/calendar")
+		c.String(http.StatusOK, `BEGIN:VCALENDAR
+BEGIN:VEVENT
+SUMMARY:レッスン
+DTSTART:20191018T193000Z
+DTEND:20191018T203000Z
+END:VEVENT
+BEGIN:VEVENT
+SUMMARY:レッスン
+DTSTART:20191025T193000Z
+DTEND:20191025T203000Z
+END:VEVENT
+END:VCALENDAR
+`)
+	})
+
 	router.Run(":" + port)
 }
