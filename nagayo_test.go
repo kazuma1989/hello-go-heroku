@@ -21,3 +21,9 @@ func Example_parseDate_2() {
 	fmt.Println(dateCells)
 	// Output: [{1 有楽町山野} {15 有楽町山野} {29 有楽町山野}]
 }
+
+func ExampleLocationMap() {
+	fmt.Println(LocationMap["有楽町山野"])
+	fmt.Println(LocationMap[""])
+	// Output: ヤマノミュージックサロン有楽町 〒100-0006\, 東京都千代田区\, 有楽町2丁目10番1号
+}

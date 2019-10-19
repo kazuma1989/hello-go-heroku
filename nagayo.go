@@ -14,7 +14,17 @@ import (
 )
 
 // ScheduleURL is URL to parse
-const ScheduleURL = "http://nagayo.sakura.ne.jp/cgi/schedule/schedule.cgi"
+var ScheduleURL = "http://nagayo.sakura.ne.jp/cgi/schedule/schedule.cgi"
+
+// LocationMap is a mapping between shortname and exact location
+var LocationMap = map[string]string{
+	"有楽町山野":    "ヤマノミュージックサロン有楽町 〒100-0006\\, 東京都千代田区\\, 有楽町2丁目10番1号",
+	"スガナミ多摩":   "東京都多摩市落合1-46-1 ココリア多摩センター4F",
+	"渋谷":       "東京都渋谷区神南1‐19‐4　日本生命アネックスビル５F",
+	"リフラ":      "東京都新宿区新宿4-3-17 ダビンチ&",
+	"★伊藤":      "〒272-0021 千葉県市川市八幡２丁目１５−10 パティオ 3階",
+	"★フォーク有楽町": "ヤマノミュージックサロン有楽町 〒100-0006\\, 東京都千代田区\\, 有楽町2丁目10番1号",
+}
 
 // Nagayo responses iCal format data
 func Nagayo(ctx *gin.Context) {
@@ -25,6 +35,19 @@ func Nagayo(ctx *gin.Context) {
 	}
 	if day <= 0 || 8 <= day {
 		ctx.String(http.StatusBadRequest, `"day" is out of range (1-7): %d`, day)
+		return
+	}
+
+	r := regexp.MustCompile(`^(?:[01][0-9]|2[0-3])[0-5][0-9]$`)
+
+	timeStart := ctx.Query("start")
+	if !r.MatchString(timeStart) {
+		ctx.String(http.StatusBadRequest, `"start" is missing or not valid pattern (HHMM)`)
+		return
+	}
+	timeEnd := ctx.Query("end")
+	if !r.MatchString(timeEnd) {
+		ctx.String(http.StatusBadRequest, `"end" is missing or not valid pattern (HHMM)`)
 		return
 	}
 
@@ -59,9 +82,9 @@ func Nagayo(ctx *gin.Context) {
 		for i := range vCalendar.Events {
 			e := &vCalendar.Events[i]
 
-			e.Location = "ヤマノミュージックサロン有楽町 〒100-0006\\, 東京都千代田区\\, 有楽町2丁目10番1号"
-			e.TimeStart = "1930"
-			e.TimeEnd = "2030"
+			e.Location = LocationMap[e.Summary]
+			e.TimeStart = timeStart
+			e.TimeEnd = timeEnd
 			e.Tzid = vCalendar.Timezone
 		}
 	}
