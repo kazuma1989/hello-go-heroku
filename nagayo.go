@@ -18,6 +18,16 @@ const ScheduleURL = "http://nagayo.sakura.ne.jp/cgi/schedule/schedule.cgi"
 
 // Nagayo responses iCal format data
 func Nagayo(ctx *gin.Context) {
+	day, err := strconv.Atoi(ctx.Query("day"))
+	if err != nil {
+		ctx.String(http.StatusBadRequest, `"day" is missing or not an integer`, err)
+		return
+	}
+	if day <= 0 || 8 <= day {
+		ctx.String(http.StatusBadRequest, `"day" is out of range (1-7): %d`, day)
+		return
+	}
+
 	vCalendar := VCalendar{
 		calname:  "石川永世 レッスンスケジュール",
 		caldesc:  ScheduleURL,
@@ -37,16 +47,6 @@ func Nagayo(ctx *gin.Context) {
 		doc, err := goquery.NewDocument(ScheduleURL + "?" + query.Encode())
 		if err != nil {
 			log.Println(err)
-			continue
-		}
-
-		day, err := strconv.Atoi(ctx.Query("day"))
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-		if day <= 0 || 8 <= day {
-			log.Printf(`"day" is out of range (1-7): %d`, day)
 			continue
 		}
 
