@@ -28,8 +28,9 @@ var LocationMap = map[string]string{
 
 // Nagayo responses iCal format data
 func Nagayo(ctx *gin.Context) {
-	day, timeStart, timeEnd, err := validateQuery(
+	day, allDay, timeStart, timeEnd, err := validateQuery(
 		ctx.Query("day"),
+		ctx.Query("allDay"),
 		ctx.Query("start"),
 		ctx.Query("end"),
 	)
@@ -70,6 +71,7 @@ func Nagayo(ctx *gin.Context) {
 			e := &events[i]
 
 			e.Location = LocationMap[e.Summary]
+			e.AllDay = allDay
 			e.TimeStart = timeStart
 			e.TimeEnd = timeEnd
 			e.Tzid = vCalendar.Timezone
@@ -82,7 +84,7 @@ func Nagayo(ctx *gin.Context) {
 	ctx.String(http.StatusOK, vCalendar.String())
 }
 
-func validateQuery(qDay string, qStart string, qEnd string) (day int, start string, end string, err error) {
+func validateQuery(qDay string, qAllDay string, qStart string, qEnd string) (day int, allDay bool, start string, end string, err error) {
 	day, err = strconv.Atoi(qDay)
 	if err != nil {
 		err = fmt.Errorf(`"day" is missing or not an integer: "%s"`, qDay)
@@ -91,6 +93,19 @@ func validateQuery(qDay string, qStart string, qEnd string) (day int, start stri
 	if day < 0 || 7 < day {
 		err = fmt.Errorf(`"day" is out of range (0-7): "%d"`, day)
 		return
+	}
+
+	if qAllDay == "" {
+		qAllDay = "false"
+	}
+	allDay, err = strconv.ParseBool(qAllDay)
+	if err != nil {
+		err = fmt.Errorf(`"allDay" is not a boolean: "%s"`, qAllDay)
+		return
+	}
+
+	if allDay {
+		return day, true, "", "", nil
 	}
 
 	r := regexp.MustCompile(`^(?:[01][0-9]|2[0-3])[0-5][0-9]$`)
@@ -103,7 +118,7 @@ func validateQuery(qDay string, qStart string, qEnd string) (day int, start stri
 		return
 	}
 
-	return day, qStart, qEnd, nil
+	return day, false, qStart, qEnd, nil
 }
 
 // VCalendar represents VCALENDAR in ics format
@@ -133,7 +148,8 @@ func (c *VCalendar) String() string {
 type VEvent struct {
 	Summary   string
 	Location  string
-	Date      string // example: 201909
+	Date      string // example: 20190901
+	AllDay    bool
 	TimeStart string // example: 0930
 	TimeEnd   string // example: 2305
 	Tzid      string // example: Asia/Tokyo
@@ -145,8 +161,12 @@ func (e *VEvent) String() string {
 	event += "BEGIN:VEVENT\n"
 	event += "SUMMARY:" + e.Summary + "\n"
 	event += "LOCATION:" + e.Location + "\n"
-	event += fmt.Sprintf("DTSTART;TZID=%s:%sT%s00", e.Tzid, e.Date, e.TimeStart) + "\n"
-	event += fmt.Sprintf("DTEND;TZID=%s:%sT%s00", e.Tzid, e.Date, e.TimeEnd) + "\n"
+	if e.AllDay {
+		event += fmt.Sprintf("DTSTART;VALUE=DATE:%s", e.Date) + "\n"
+	} else {
+		event += fmt.Sprintf("DTSTART;TZID=%s:%sT%s00", e.Tzid, e.Date, e.TimeStart) + "\n"
+		event += fmt.Sprintf("DTEND;TZID=%s:%sT%s00", e.Tzid, e.Date, e.TimeEnd) + "\n"
+	}
 	event += "END:VEVENT\n"
 
 	return event
