@@ -18,12 +18,12 @@ var ScheduleURL = "http://nagayo.sakura.ne.jp/cgi/schedule/schedule.cgi"
 
 // LocationMap is a mapping between shortname and exact location
 var LocationMap = map[string]string{
-	"有楽町山野":    "ヤマノミュージックサロン有楽町 〒100-0006\\, 東京都千代田区\\, 有楽町2丁目10番1号",
+	"有楽町山野":    "東京都千代田区有楽町2-10-1 東京交通会館11F",
 	"スガナミ多摩":   "東京都多摩市落合1-46-1 ココリア多摩センター4F",
 	"渋谷":       "東京都渋谷区神南1‐19‐4　日本生命アネックスビル５F",
 	"リフラ":      "東京都新宿区新宿4-3-17 ダビンチ&",
 	"★伊藤":      "〒272-0021 千葉県市川市八幡２丁目１５−10 パティオ 3階",
-	"★フォーク有楽町": "ヤマノミュージックサロン有楽町 〒100-0006\\, 東京都千代田区\\, 有楽町2丁目10番1号",
+	"★フォーク有楽町": "東京都千代田区有楽町2-10-1 東京交通会館11F",
 }
 
 // Nagayo responses iCal format data
