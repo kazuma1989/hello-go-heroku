@@ -88,8 +88,8 @@ func validateQuery(qDay string, qStart string, qEnd string) (day int, start stri
 		err = fmt.Errorf(`"day" is missing or not an integer: "%s"`, qDay)
 		return
 	}
-	if day <= 0 || 8 <= day {
-		err = fmt.Errorf(`"day" is out of range (1-7): "%d"`, day)
+	if day < 0 || 7 < day {
+		err = fmt.Errorf(`"day" is out of range (0-7): "%d"`, day)
 		return
 	}
 
@@ -206,7 +206,16 @@ type dateCell struct {
 }
 
 func parseDate(doc *goquery.Document, day int) (cells []dateCell, err error) {
-	doc.Find(fmt.Sprintf("tr:not(:first-of-type) >td:nth-of-type(%d)", day)).Each(func(i int, elem *goquery.Selection) {
+	var elems *goquery.Selection
+	if day == 0 {
+		allCol := "tr:not(:first-of-type) >td"
+		elems = doc.Find(allCol)
+	} else {
+		specificCol := fmt.Sprintf("tr:not(:first-of-type) >td:nth-of-type(%d)", day)
+		elems = doc.Find(specificCol)
+	}
+
+	elems.Each(func(i int, elem *goquery.Selection) {
 		innerText := ConvertEUCJP(elem.Text())
 
 		// 12有楽町山野 -> [12有楽町山野, 12, 有楽町山野]
