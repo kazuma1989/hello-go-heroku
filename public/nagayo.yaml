@@ -1,0 +1,138 @@
+openapi: 3.0.1
+
+info:
+  title: Hello Go Heroku
+  description: Hello world project. But provides my some utility APIs.
+  contact:
+    url: "https://github.com/kazuma1989"
+  version: 1.0.0
+
+servers:
+  - url: "https://aqueous-castle-07857.herokuapp.com/"
+
+paths:
+  /nagayo.ics:
+    get:
+      summary: Show schedule as iCal format
+      description: |
+        Scrape [classic web page](http://nagayo.sakura.ne.jp/cgi/schedule/schedule.cgi) and convert it into iCal form
+
+      responses:
+        "200":
+          description: Successful operation
+          content:
+            text/calendar:
+              schema:
+                type: string
+                format: ics
+              examples:
+                day0:
+                  summary: All events with all day time range
+                  description: |
+                    `?day=0&allDay=true` returns this.  
+                    `day=0` applies no filter for day and `allDay=true` returns each events as an all day event.
+                  value: |
+                    BEGIN:VCALENDAR
+                    X-WR-CALNAME:石川永世 レッスンスケジュール
+                    X-WR-CALDESC:http://nagayo.sakura.ne.jp/cgi/schedule/schedule.cgi
+                    X-WR-TIMEZONE:Asia/Tokyo
+                    BEGIN:VEVENT
+                    SUMMARY:★フォーク有楽町
+                    LOCATION:東京都千代田区有楽町2-10-1 東京交通会館11F
+                    DTSTART;VALUE=DATE:20190901
+                    END:VEVENT
+                    BEGIN:VEVENT
+                    SUMMARY:★伊藤
+                    LOCATION:〒272-0021 千葉県市川市八幡２丁目１５−10 パティオ 3階
+                    DTSTART;VALUE=DATE:20190902
+                    END:VEVENT
+                    BEGIN:VEVENT
+                    SUMMARY:有楽町山野
+                    LOCATION:東京都千代田区有楽町2-10-1 東京交通会館11F
+                    DTSTART;VALUE=DATE:20190903
+                    END:VEVENT
+                    BEGIN:VEVENT
+                    SUMMARY:スガナミ多摩
+                    LOCATION:東京都多摩市落合1-46-1 ココリア多摩センター4F
+                    DTSTART;VALUE=DATE:20190905
+                    END:VEVENT
+                    END:VCALENDAR
+
+                day1to7:
+                  summary: Specified day
+                  description: |
+                    `?day=1&start=1930&end=2030` returns this.  
+                    `day=1` filters day with only Sunday and `start=1930&end=2030` returns each events as 19:30-20:30 event.
+                  value: |
+                    BEGIN:VCALENDAR
+                    X-WR-CALNAME:石川永世 レッスンスケジュール
+                    X-WR-CALDESC:http://nagayo.sakura.ne.jp/cgi/schedule/schedule.cgi
+                    X-WR-TIMEZONE:Asia/Tokyo
+                    BEGIN:VEVENT
+                    SUMMARY:★フォーク有楽町
+                    LOCATION:東京都千代田区有楽町2-10-1 東京交通会館11F
+                    DTSTART;TZID=Asia/Tokyo:20190901T193000
+                    DTEND;TZID=Asia/Tokyo:20190901T203000
+                    END:VEVENT
+                    BEGIN:VEVENT
+                    SUMMARY:★フォーク有楽町
+                    LOCATION:東京都千代田区有楽町2-10-1 東京交通会館11F
+                    DTSTART;TZID=Asia/Tokyo:20191020T193000
+                    DTEND;TZID=Asia/Tokyo:20191020T203000
+                    END:VEVENT
+                    BEGIN:VEVENT
+                    SUMMARY:★多摩Ｍails
+                    LOCATION:
+                    DTSTART;TZID=Asia/Tokyo:20191103T193000
+                    DTEND;TZID=Asia/Tokyo:20191103T203000
+                    END:VEVENT
+                    END:VCALENDAR
+
+        "400":
+          description: Invalid parameters
+          content:
+            text/plain:
+              example: '"day" is missing or not an integer: "foo"'
+
+      parameters:
+        - name: day
+          in: query
+          description: |
+            Filter for day of week.
+          required: true
+          style: form
+          schema:
+            type: integer
+            minimum: 0
+            maximum: 7
+          example: 2
+
+        - name: allDay
+          in: query
+          description: |
+            Return as all day event or not.
+            When it is set `false`, `start` and `end` parameter are required.
+          style: form
+          schema:
+            type: boolean
+            default: false
+
+        - name: start
+          in: query
+          description: |
+            The time to start the events.
+          style: form
+          schema:
+            type: string
+            format: MMHH (24 hours)
+          example: 0905
+
+        - name: end
+          in: query
+          description: |
+            The time to end the events.
+          style: form
+          schema:
+            type: string
+            format: MMHH (24 hours)
+          example: 2030
