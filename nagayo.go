@@ -37,7 +37,17 @@ func Nagayo(ctx *gin.Context) {
 			continue
 		}
 
-		parsed, err := Parse(doc)
+		day, err := strconv.Atoi(ctx.Query("day"))
+		if err != nil {
+			log.Println(err)
+			continue
+		}
+		if day <= 0 || 8 <= day {
+			log.Printf(`"day" is out of range (1-7): %d`, day)
+			continue
+		}
+
+		parsed, err := Parse(doc, day)
 		if err != nil {
 			log.Println(err)
 			continue
@@ -59,14 +69,14 @@ func Nagayo(ctx *gin.Context) {
 }
 
 // Parse parses the schedule page
-func Parse(doc *goquery.Document) (events []string, err error) {
+func Parse(doc *goquery.Document, day int) (events []string, err error) {
 	ym, err := parseYearMonth(doc)
 	if err != nil {
 		log.Println(err)
 		return
 	}
 
-	dateCells, err := parseDate(doc, 3)
+	dateCells, err := parseDate(doc, day)
 	if err != nil {
 		log.Println(err)
 		return
