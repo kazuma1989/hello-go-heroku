@@ -5,9 +5,12 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
+	"time"
 
 	"github.com/PuerkitoBio/goquery"
 	"github.com/gin-gonic/gin"
@@ -15,6 +18,18 @@ import (
 	"golang.org/x/text/encoding/japanese"
 	"golang.org/x/text/transform"
 )
+
+type yearMonth struct {
+	year  int
+	month int
+}
+
+func newYearMonth(t time.Time) yearMonth {
+	year := t.Year()
+	month := int(t.Month())
+
+	return yearMonth{year, month}
+}
 
 var parseLog *log.Logger
 
@@ -41,13 +56,27 @@ func main() {
 	})
 
 	router.GET("/nagayo.ics", func(ctx *gin.Context) {
-		doc, err := goquery.NewDocument("http://nagayo.sakura.ne.jp/cgi/schedule/schedule.cgi?year=2019&month=10")
-		if err != nil {
-			ctx.Status(http.StatusInternalServerError)
-			return
+		now := time.Now()
+		ymlist := []yearMonth{
+			newYearMonth(now.AddDate(0, -1, 0)),
+			newYearMonth(now),
+			newYearMonth(now.AddDate(0, 1, 0)),
 		}
 
-		events := parse(doc)
+		var events []string
+		for _, ym := range ymlist {
+			v := url.Values{}
+			v.Set("year", strconv.Itoa(ym.year))
+			v.Set("month", strconv.Itoa(ym.month))
+
+			doc, err := goquery.NewDocument("http://nagayo.sakura.ne.jp/cgi/schedule/schedule.cgi?" + v.Encode())
+			if err != nil {
+				ctx.Status(http.StatusInternalServerError)
+				return
+			}
+
+			events = append(events, parse(doc)...)
+		}
 
 		ctx.Header("Content-Type", "text/calendar")
 		ctx.String(http.StatusOK, "BEGIN:VCALENDAR\n"+strings.Join(events, "")+"END:VCALENDAR\n")
