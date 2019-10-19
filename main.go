@@ -34,7 +34,7 @@ func newYearMonth(t time.Time) yearMonth {
 var parseLog *log.Logger
 
 func init() {
-	parseLog = log.New(os.Stdout, "[Parse]", 0)
+	parseLog = log.New(os.Stdout, "[Parse] ", 0)
 }
 
 func main() {
