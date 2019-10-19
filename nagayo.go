@@ -66,7 +66,7 @@ func Parse(doc *goquery.Document) (events []string, err error) {
 		return
 	}
 
-	dateCells, err := parseDate(doc)
+	dateCells, err := parseDate(doc, 3)
 	if err != nil {
 		log.Println(err)
 		return
@@ -115,9 +115,8 @@ type dateCell struct {
 	summary string
 }
 
-func parseDate(doc *goquery.Document) (cells []dateCell, err error) {
-	// nth-of-type(3): "3" represents Tuesday
-	doc.Find("tr >td:nth-of-type(3)").Each(func(i int, elem *goquery.Selection) {
+func parseDate(doc *goquery.Document, day int) (cells []dateCell, err error) {
+	doc.Find(fmt.Sprintf("tr:not(:first-of-type) >td:nth-of-type(%d)", day)).Each(func(i int, elem *goquery.Selection) {
 		innerText := ConvertEUCJP(elem.Text())
 
 		// 12有楽町山野 -> [12有楽町山野, 12, 有楽町山野]
