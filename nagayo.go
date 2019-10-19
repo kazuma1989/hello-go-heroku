@@ -7,7 +7,6 @@ import (
 	"net/url"
 	"regexp"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
@@ -19,17 +18,21 @@ const ScheduleURL = "http://nagayo.sakura.ne.jp/cgi/schedule/schedule.cgi"
 
 // Nagayo responses iCal format data
 func Nagayo(ctx *gin.Context) {
-	now := time.Now()
+	vCalendar := VCalendar{
+		calname:  "石川永世 レッスンスケジュール",
+		caldesc:  ScheduleURL,
+		timezone: "Asia/Tokyo",
+	}
 
-	var events []string
-	for _, ym := range []time.Time{
+	now := time.Now()
+	for _, t := range []time.Time{
 		now.AddDate(0, -1, 0), // prev month
 		now,                   // this month
 		now.AddDate(0, 1, 0),  // next month
 	} {
 		query := url.Values{}
-		query.Set("year", strconv.Itoa(ym.Year()))
-		query.Set("month", strconv.Itoa(int(ym.Month())))
+		query.Set("year", strconv.Itoa(t.Year()))
+		query.Set("month", strconv.Itoa(int(t.Month())))
 
 		doc, err := goquery.NewDocument(ScheduleURL + "?" + query.Encode())
 		if err != nil {
@@ -47,29 +50,72 @@ func Nagayo(ctx *gin.Context) {
 			continue
 		}
 
-		parsed, err := Parse(doc, day)
+		vCalendar.events, err = Parse(doc, day)
 		if err != nil {
 			log.Println(err)
 			continue
 		}
 
-		events = append(events, parsed...)
+		for i := range vCalendar.events {
+			vCalendar.events[i].location = "ヤマノミュージックサロン有楽町 〒100-0006\\, 東京都千代田区\\, 有楽町2丁目10番1号"
+			vCalendar.events[i].timeStart = "1930"
+			vCalendar.events[i].timeEnd = "2030"
+			vCalendar.events[i].tzid = vCalendar.timezone
+		}
 	}
 
+	ctx.Header("Content-Type", "text/calendar")
+	ctx.String(http.StatusOK, vCalendar.String())
+}
+
+// VCalendar represents VCALENDAR in ics format
+type VCalendar struct {
+	calname  string
+	caldesc  string
+	timezone string // example: Asia/Tokyo
+	events   []VEvent
+}
+
+// String returns a string of BEGIN:VCALENDAR...END:VCALENDAR format
+func (c *VCalendar) String() string {
 	var calendar string
 	calendar += "BEGIN:VCALENDAR\n"
-	calendar += "X-WR-CALNAME:石川永世 レッスンスケジュール\n"
-	calendar += "X-WR-CALDESC:" + ScheduleURL + "\n"
-	calendar += "X-WR-TIMEZONE:Asia/Tokyo\n"
-	calendar += strings.Join(events, "")
+	calendar += "X-WR-CALNAME:" + c.calname + "\n"
+	calendar += "X-WR-CALDESC:" + c.caldesc + "\n"
+	calendar += "X-WR-TIMEZONE:" + c.timezone + "\n"
+	for _, e := range c.events {
+		calendar += e.String()
+	}
 	calendar += "END:VCALENDAR\n"
 
-	ctx.Header("Content-Type", "text/calendar")
-	ctx.String(http.StatusOK, calendar)
+	return calendar
+}
+
+// VEvent represents VEVENT in ics format
+type VEvent struct {
+	summary   string
+	location  string
+	date      string // example: 201909
+	timeStart string // example: 0930
+	timeEnd   string // example: 2305
+	tzid      string // example: Asia/Tokyo
+}
+
+// String returns a string of BEGIN:VEVENT...END:VEVENT format
+func (e *VEvent) String() string {
+	var event string
+	event += "BEGIN:VEVENT\n"
+	event += "SUMMARY:" + e.summary + "\n"
+	event += "LOCATION:" + e.location + "\n"
+	event += fmt.Sprintf("DTSTART;TZID=%s:%sT%s00", e.tzid, e.date, e.timeStart) + "\n"
+	event += fmt.Sprintf("DTEND;TZID=%s:%sT%s00", e.tzid, e.date, e.timeEnd) + "\n"
+	event += "END:VEVENT\n"
+
+	return event
 }
 
 // Parse parses the schedule page
-func Parse(doc *goquery.Document, day int) (events []string, err error) {
+func Parse(doc *goquery.Document, day int) (events []VEvent, err error) {
 	ym, err := parseYearMonth(doc)
 	if err != nil {
 		log.Println(err)
@@ -83,14 +129,10 @@ func Parse(doc *goquery.Document, day int) (events []string, err error) {
 	}
 
 	for _, d := range dateCells {
-		event := "BEGIN:VEVENT\n"
-		event += "SUMMARY:" + d.summary + "\n"
-		event += "LOCATION:ヤマノミュージックサロン有楽町 〒100-0006\\, 東京都千代田区\\, 有楽町2丁目10番1号\n"
-		event += "DTSTART;TZID=Asia/Tokyo:" + fmt.Sprintf("%04s%02s%02sT193000", ym.year, ym.month, d.date) + "\n"
-		event += "DTEND;TZID=Asia/Tokyo:" + fmt.Sprintf("%04s%02s%02sT203000", ym.year, ym.month, d.date) + "\n"
-		event += "END:VEVENT\n"
-
-		events = append(events, event)
+		events = append(events, VEvent{
+			summary: d.summary,
+			date:    fmt.Sprintf("%04s%02s%02s", ym.year, ym.month, d.date),
+		})
 	}
 
 	return events, nil
