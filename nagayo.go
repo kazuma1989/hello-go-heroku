@@ -28,26 +28,13 @@ var LocationMap = map[string]string{
 
 // Nagayo responses iCal format data
 func Nagayo(ctx *gin.Context) {
-	day, err := strconv.Atoi(ctx.Query("day"))
+	day, timeStart, timeEnd, err := validateQuery(
+		ctx.Query("day"),
+		ctx.Query("start"),
+		ctx.Query("end"),
+	)
 	if err != nil {
-		ctx.String(http.StatusBadRequest, `"day" is missing or not an integer`, err)
-		return
-	}
-	if day <= 0 || 8 <= day {
-		ctx.String(http.StatusBadRequest, `"day" is out of range (1-7): %d`, day)
-		return
-	}
-
-	r := regexp.MustCompile(`^(?:[01][0-9]|2[0-3])[0-5][0-9]$`)
-
-	timeStart := ctx.Query("start")
-	if !r.MatchString(timeStart) {
-		ctx.String(http.StatusBadRequest, `"start" is missing or not valid pattern (HHMM)`)
-		return
-	}
-	timeEnd := ctx.Query("end")
-	if !r.MatchString(timeEnd) {
-		ctx.String(http.StatusBadRequest, `"end" is missing or not valid pattern (HHMM)`)
+		ctx.String(http.StatusBadRequest, err.Error())
 		return
 	}
 
@@ -91,6 +78,30 @@ func Nagayo(ctx *gin.Context) {
 
 	ctx.Header("Content-Type", "text/calendar")
 	ctx.String(http.StatusOK, vCalendar.String())
+}
+
+func validateQuery(qDay string, qStart string, qEnd string) (day int, start string, end string, err error) {
+	day, err = strconv.Atoi(qDay)
+	if err != nil {
+		err = fmt.Errorf(`"day" is missing or not an integer: %s`, qDay)
+		return
+	}
+	if day <= 0 || 8 <= day {
+		err = fmt.Errorf(`"day" is out of range (1-7): %d`, day)
+		return
+	}
+
+	r := regexp.MustCompile(`^(?:[01][0-9]|2[0-3])[0-5][0-9]$`)
+	if !r.MatchString(qStart) {
+		err = fmt.Errorf(`"start" is missing or not valid pattern (HHMM, 24 hours): %s`, qStart)
+		return
+	}
+	if !r.MatchString(qEnd) {
+		err = fmt.Errorf(`"end" is missing or not valid pattern (HHMM, 24 hours): %s`, qEnd)
+		return
+	}
+
+	return day, qStart, qEnd, nil
 }
 
 // VCalendar represents VCALENDAR in ics format
