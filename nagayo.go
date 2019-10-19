@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"regexp"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/PuerkitoBio/goquery"
@@ -39,34 +40,15 @@ func Nagayo(ctx *gin.Context) {
 		return
 	}
 
+	receiver := make(chan []VEvent)
+	go worker(receiver, day)
+
 	vCalendar := VCalendar{
 		Calname:  "石川永世 レッスンスケジュール",
 		Caldesc:  ScheduleURL,
 		Timezone: "Asia/Tokyo",
 	}
-
-	now := time.Now()
-	for _, t := range []time.Time{
-		now.AddDate(0, -1, 0), // prev month
-		now,                   // this month
-		now.AddDate(0, 1, 0),  // next month
-	} {
-		query := url.Values{}
-		query.Set("year", strconv.Itoa(t.Year()))
-		query.Set("month", strconv.Itoa(int(t.Month())))
-
-		doc, err := goquery.NewDocument(ScheduleURL + "?" + query.Encode())
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-
-		events, err := Parse(doc, day)
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-
+	for events := range receiver {
 		for i := range events {
 			e := &events[i]
 
@@ -82,6 +64,44 @@ func Nagayo(ctx *gin.Context) {
 
 	ctx.Header("Content-Type", "text/calendar")
 	ctx.String(http.StatusOK, vCalendar.String())
+}
+
+func worker(receiver chan []VEvent, day int) {
+	defer close(receiver)
+
+	var wg sync.WaitGroup
+
+	now := time.Now()
+	for _, t := range []time.Time{
+		now.AddDate(0, -1, 0), // prev month
+		now,                   // this month
+		now.AddDate(0, 1, 0),  // next month
+	} {
+		query := url.Values{}
+		query.Set("year", strconv.Itoa(t.Year()))
+		query.Set("month", strconv.Itoa(int(t.Month())))
+
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+
+			doc, err := goquery.NewDocument(ScheduleURL + "?" + query.Encode())
+			if err != nil {
+				log.Println(err)
+				return
+			}
+
+			events, err := ParseDoc(doc, day)
+			if err != nil {
+				log.Println(err)
+				return
+			}
+
+			receiver <- events
+		}()
+	}
+
+	wg.Wait()
 }
 
 func validateQuery(qDay string, qAllDay string, qStart string, qEnd string) (day int, allDay bool, start string, end string, err error) {
@@ -172,8 +192,8 @@ func (e *VEvent) String() string {
 	return event
 }
 
-// Parse parses the schedule page
-func Parse(doc *goquery.Document, day int) (events []VEvent, err error) {
+// ParseDoc parses the schedule page
+func ParseDoc(doc *goquery.Document, day int) (events []VEvent, err error) {
 	ym, err := parseYearMonth(doc)
 	if err != nil {
 		log.Println(err)
