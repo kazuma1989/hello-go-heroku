@@ -29,9 +29,9 @@ func Nagayo(ctx *gin.Context) {
 	}
 
 	vCalendar := VCalendar{
-		calname:  "石川永世 レッスンスケジュール",
-		caldesc:  ScheduleURL,
-		timezone: "Asia/Tokyo",
+		Calname:  "石川永世 レッスンスケジュール",
+		Caldesc:  ScheduleURL,
+		Timezone: "Asia/Tokyo",
 	}
 
 	now := time.Now()
@@ -50,17 +50,19 @@ func Nagayo(ctx *gin.Context) {
 			continue
 		}
 
-		vCalendar.events, err = Parse(doc, day)
+		vCalendar.Events, err = Parse(doc, day)
 		if err != nil {
 			log.Println(err)
 			continue
 		}
 
-		for i := range vCalendar.events {
-			vCalendar.events[i].location = "ヤマノミュージックサロン有楽町 〒100-0006\\, 東京都千代田区\\, 有楽町2丁目10番1号"
-			vCalendar.events[i].timeStart = "1930"
-			vCalendar.events[i].timeEnd = "2030"
-			vCalendar.events[i].tzid = vCalendar.timezone
+		for i := range vCalendar.Events {
+			e := &vCalendar.Events[i]
+
+			e.Location = "ヤマノミュージックサロン有楽町 〒100-0006\\, 東京都千代田区\\, 有楽町2丁目10番1号"
+			e.TimeStart = "1930"
+			e.TimeEnd = "2030"
+			e.Tzid = vCalendar.Timezone
 		}
 	}
 
@@ -70,20 +72,20 @@ func Nagayo(ctx *gin.Context) {
 
 // VCalendar represents VCALENDAR in ics format
 type VCalendar struct {
-	calname  string
-	caldesc  string
-	timezone string // example: Asia/Tokyo
-	events   []VEvent
+	Calname  string
+	Caldesc  string
+	Timezone string // example: Asia/Tokyo
+	Events   []VEvent
 }
 
 // String returns a string of BEGIN:VCALENDAR...END:VCALENDAR format
 func (c *VCalendar) String() string {
 	var calendar string
 	calendar += "BEGIN:VCALENDAR\n"
-	calendar += "X-WR-CALNAME:" + c.calname + "\n"
-	calendar += "X-WR-CALDESC:" + c.caldesc + "\n"
-	calendar += "X-WR-TIMEZONE:" + c.timezone + "\n"
-	for _, e := range c.events {
+	calendar += "X-WR-CALNAME:" + c.Calname + "\n"
+	calendar += "X-WR-CALDESC:" + c.Caldesc + "\n"
+	calendar += "X-WR-TIMEZONE:" + c.Timezone + "\n"
+	for _, e := range c.Events {
 		calendar += e.String()
 	}
 	calendar += "END:VCALENDAR\n"
@@ -93,22 +95,22 @@ func (c *VCalendar) String() string {
 
 // VEvent represents VEVENT in ics format
 type VEvent struct {
-	summary   string
-	location  string
-	date      string // example: 201909
-	timeStart string // example: 0930
-	timeEnd   string // example: 2305
-	tzid      string // example: Asia/Tokyo
+	Summary   string
+	Location  string
+	Date      string // example: 201909
+	TimeStart string // example: 0930
+	TimeEnd   string // example: 2305
+	Tzid      string // example: Asia/Tokyo
 }
 
 // String returns a string of BEGIN:VEVENT...END:VEVENT format
 func (e *VEvent) String() string {
 	var event string
 	event += "BEGIN:VEVENT\n"
-	event += "SUMMARY:" + e.summary + "\n"
-	event += "LOCATION:" + e.location + "\n"
-	event += fmt.Sprintf("DTSTART;TZID=%s:%sT%s00", e.tzid, e.date, e.timeStart) + "\n"
-	event += fmt.Sprintf("DTEND;TZID=%s:%sT%s00", e.tzid, e.date, e.timeEnd) + "\n"
+	event += "SUMMARY:" + e.Summary + "\n"
+	event += "LOCATION:" + e.Location + "\n"
+	event += fmt.Sprintf("DTSTART;TZID=%s:%sT%s00", e.Tzid, e.Date, e.TimeStart) + "\n"
+	event += fmt.Sprintf("DTEND;TZID=%s:%sT%s00", e.Tzid, e.Date, e.TimeEnd) + "\n"
 	event += "END:VEVENT\n"
 
 	return event
@@ -130,8 +132,8 @@ func Parse(doc *goquery.Document, day int) (events []VEvent, err error) {
 
 	for _, d := range dateCells {
 		events = append(events, VEvent{
-			summary: d.summary,
-			date:    fmt.Sprintf("%04s%02s%02s", ym.year, ym.month, d.date),
+			Summary: d.summary,
+			Date:    fmt.Sprintf("%04s%02s%02s", ym.year, ym.month, d.date),
 		})
 	}
 
