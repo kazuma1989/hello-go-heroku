@@ -60,20 +60,22 @@ func Nagayo(ctx *gin.Context) {
 			continue
 		}
 
-		vCalendar.Events, err = Parse(doc, day)
+		events, err := Parse(doc, day)
 		if err != nil {
 			log.Println(err)
 			continue
 		}
 
-		for i := range vCalendar.Events {
-			e := &vCalendar.Events[i]
+		for i := range events {
+			e := &events[i]
 
 			e.Location = LocationMap[e.Summary]
 			e.TimeStart = timeStart
 			e.TimeEnd = timeEnd
 			e.Tzid = vCalendar.Timezone
 		}
+
+		vCalendar.Events = append(vCalendar.Events, events...)
 	}
 
 	ctx.Header("Content-Type", "text/calendar")
