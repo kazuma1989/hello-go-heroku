@@ -19,18 +19,6 @@ import (
 	"golang.org/x/text/transform"
 )
 
-type yearMonth struct {
-	year  int
-	month int
-}
-
-func newYearMonth(t time.Time) yearMonth {
-	year := t.Year()
-	month := int(t.Month())
-
-	return yearMonth{year, month}
-}
-
 var parseLog *log.Logger
 
 func init() {
@@ -49,27 +37,21 @@ func main() {
 	router.GET("/", func(ctx *gin.Context) {
 		ctx.HTML(http.StatusOK, "index.html", nil)
 	})
-	router.GET("/ping", func(ctx *gin.Context) {
-		ctx.JSON(http.StatusOK, gin.H{
-			"message": "hello",
-		})
-	})
 
 	router.GET("/nagayo.ics", func(ctx *gin.Context) {
 		now := time.Now()
-		ymlist := []yearMonth{
-			newYearMonth(now.AddDate(0, -1, 0)),
-			newYearMonth(now),
-			newYearMonth(now.AddDate(0, 1, 0)),
-		}
 
 		var events []string
-		for _, ym := range ymlist {
-			v := url.Values{}
-			v.Set("year", strconv.Itoa(ym.year))
-			v.Set("month", strconv.Itoa(ym.month))
+		for _, ym := range []time.Time{
+			now.AddDate(0, -1, 0), // prev month
+			now,                   // this month
+			now.AddDate(0, 1, 0),  // next month
+		} {
+			query := url.Values{}
+			query.Set("year", strconv.Itoa(ym.Year()))
+			query.Set("month", strconv.Itoa(int(ym.Month())))
 
-			doc, err := goquery.NewDocument("http://nagayo.sakura.ne.jp/cgi/schedule/schedule.cgi?" + v.Encode())
+			doc, err := goquery.NewDocument("http://nagayo.sakura.ne.jp/cgi/schedule/schedule.cgi?" + query.Encode())
 			if err != nil {
 				ctx.Status(http.StatusInternalServerError)
 				return
