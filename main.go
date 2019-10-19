@@ -9,12 +9,6 @@ import (
 	_ "github.com/heroku/x/hmetrics/onload"
 )
 
-var parseLog *log.Logger
-
-func init() {
-	parseLog = log.New(os.Stdout, "[Parse] ", 0)
-}
-
 func main() {
 	port := os.Getenv("PORT")
 	if port == "" {
