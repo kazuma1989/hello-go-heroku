@@ -78,8 +78,17 @@ func main() {
 			events = append(events, parse(doc)...)
 		}
 
+		var calendar string
+		calendar += "BEGIN:VCALENDAR\n"
+		calendar += `X-WR-CALNAME:石川永世 レッスンスケジュール
+X-WR-CALDESC:http://nagayo.sakura.ne.jp/cgi/schedule/schedule.cgi
+X-WR-TIMEZONE:Asia/Tokyo
+`
+		calendar += strings.Join(events, "")
+		calendar += "END:VCALENDAR\n"
+
 		ctx.Header("Content-Type", "text/calendar")
-		ctx.String(http.StatusOK, "BEGIN:VCALENDAR\n"+strings.Join(events, "")+"END:VCALENDAR\n")
+		ctx.String(http.StatusOK, calendar)
 	})
 
 	router.Run(":" + port)
