@@ -85,21 +85,21 @@ func Nagayo(ctx *gin.Context) {
 func validateQuery(qDay string, qStart string, qEnd string) (day int, start string, end string, err error) {
 	day, err = strconv.Atoi(qDay)
 	if err != nil {
-		err = fmt.Errorf(`"day" is missing or not an integer: %s`, qDay)
+		err = fmt.Errorf(`"day" is missing or not an integer: "%s"`, qDay)
 		return
 	}
 	if day <= 0 || 8 <= day {
-		err = fmt.Errorf(`"day" is out of range (1-7): %d`, day)
+		err = fmt.Errorf(`"day" is out of range (1-7): "%d"`, day)
 		return
 	}
 
 	r := regexp.MustCompile(`^(?:[01][0-9]|2[0-3])[0-5][0-9]$`)
 	if !r.MatchString(qStart) {
-		err = fmt.Errorf(`"start" is missing or not valid pattern (HHMM, 24 hours): %s`, qStart)
+		err = fmt.Errorf(`"start" is missing or not valid pattern (HHMM, 24 hours): "%s"`, qStart)
 		return
 	}
 	if !r.MatchString(qEnd) {
-		err = fmt.Errorf(`"end" is missing or not valid pattern (HHMM, 24 hours): %s`, qEnd)
+		err = fmt.Errorf(`"end" is missing or not valid pattern (HHMM, 24 hours): "%s"`, qEnd)
 		return
 	}
 
